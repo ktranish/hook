@@ -1,15 +1,14 @@
 # Hook
 
-**Hook** is an enterprise-ready, lightweight TypeScript library for managing HTTP requests with built-in retry logic, circuit breaker functionality, customizable configurations, and robust logging. Designed to scale for both small and large applications, Hook provides a flexible and intuitive API for reliable HTTP communication.
+**Hook** is a lightweight, flexible, and enterprise-ready TypeScript library for managing HTTP requests. Built on the native `fetch` API, it offers a clean API for all HTTP methods, robust global configurations, content-type handling, and lifecycle logging for requests and responses.
 
 ## Features
 
-- 🌐 **HTTP Method Shortcuts**: Intuitive methods like hook.get, hook.post, hook.del, etc.
-- 🔄 **Retry Logic**: Configurable retry attempts and delays with custom retry conditions.
-- 🛡️ **Circuit Breaker**: Automatically prevents repeated failures during outages.
-- 📈 **Detailed Logging**: Hook into request, response, and error events for debugging and monitoring.
-- ⚙️ **Global Configuration**: Set global defaults for headers, retries, delays, and more.
-- 🛠️ **Lightweight and Maintainable**: Focused on reliability and scalability for long-term use.
+- 🌐 **Flexible HTTP Methods**: Shortcuts like `hook.get`, `hook.post`, `hook.del`, etc.
+- 🛡️ **Global Configuration**: Define default headers, mode, and credentials.
+- 🔄 **Content-Type Detection**: Automatically parses JSON, text, binary, and more.
+- 📈 **Lifecycle Logging**: Hook into request, response, and error events.
+- 🛠️ **Lightweight**: Minimal overhead, dependency-free, and built on `fetch`.
 
 ## Installation
 
@@ -27,59 +26,78 @@ pnpm add @ktranish/hook
 
 ### 1. Basic GET Request
 
-Send a simple HTTP request:
-
 ```tsx
 import hook from '@ktranish/hook';
-
-const data = await hook.get('https://jsonplaceholder.typicode.com/posts/1');
-console.log(data);
-```
-
-### 2. POST Request with Data
-
-Handle transient errors with retries and delays:
-
-```tsx
-const newPost = await hook.post(
-  'https://jsonplaceholder.typicode.com/posts',
-  { title: 'New Post', content: 'Hello World' }
-);
-console.log(newPost);
-```
-
-### 3. DELETE Request
-
-Trigger webhook events for request statuses:
-
-```tsx
-await hook.del('https://jsonplaceholder.typicode.com/posts/1');
-console.log('Post deleted');
-```
-
-### 4. Global Configuration
-
-You can configure global defaults for headers, retries, and delays:
-
-```tsx
-import hook, { configureGlobal } from '@ktranish/hook';
-
-configureGlobal({
-  headers: { Authorization: 'Bearer global-token' },
-  retries: 5,
-  delay: 2000,
-});
 
 const data = await hook.get('https://api.example.com/resource');
 console.log(data);
 ```
 
-### 5. Logging Requests, Responses, and Errors
-
-Hook provides lifecycle hooks to log request details:
+### 2. POST Request with Data
 
 ```tsx
-import hook, { configureLogger } from '@ktranish/hook';
+const newResource = await hook.post(
+  'https://api.example.com/resource',
+  { name: 'New Resource' }
+);
+console.log(newResource);
+```
+
+### 3. DELETE Request
+
+```tsx
+await hook.del('https://api.example.com/resource/1');
+console.log('Resource deleted');
+```
+
+### 4. Handle Different Content Types
+
+#### JSON Response
+
+```tsx
+const data = await hook.get('https://api.example.com/resource');
+console.log(data); // JSON parsed data
+```
+
+#### Text Response
+
+```tsx
+const text = await hook.get<string>('https://api.example.com/plain-text');
+console.log(text);
+```
+
+#### Binary Data
+
+```tsx
+const fileBuffer = await hook.get<ArrayBuffer>(
+  'https://api.example.com/file',
+  { headers: { Accept: 'application/octet-stream' } }
+);
+console.log(fileBuffer);
+```
+
+### 5. Global Configuration
+
+You can set global headers, modes, or credentials for all requests:
+
+```tsx
+import { configureGlobal } from '@ktranish/hook';
+
+configureGlobal({
+  headers: { Authorization: 'Bearer token' },
+  credentials: 'include',
+});
+
+const data = await hook.get('https://api.example.com/secure-resource');
+console.log(data);
+```
+
+### 6. Lifecycle Logging
+
+Hook provides logging hooks for requests, responses, and errors:
+
+```tsx
+import { configureLogger } from '@ktranish/hook';
 
 configureLogger({
   onRequest: (url, options) => console.log(`[Request] ${url}`, options),
@@ -91,87 +109,42 @@ const data = await hook.get('https://api.example.com/resource');
 console.log(data);
 ```
 
-### 6. Retry Logic with Custom Conditions
-
-By default, Hook retries on server errors (`>=500`). You can configure custom retry conditions:
-
-```tsx
-import hook, { configureRetryCondition } from '@ktranish/hook';
-
-configureRetryCondition((error) => {
-  return error.response?.status === 429; // Retry only on rate-limiting errors
-});
-
-const data = await hook.get('https://api.example.com/resource');
-console.log(data);
-```
-
-### 7. Circuit Breaker for Reliability
-
-Hook includes a built-in circuit breaker to prevent repeated failures during outages:
-
-```tsx
-try {
-  const data = await hook.get('https://unstable-api.example.com/resource');
-  console.log(data);
-} catch (error) {
-  console.error('Request failed:', error.message);
-}
-```
-
 ## API Reference
-
-`hook<T = any>(url: string, options?: AxiosRequestConfig, retries?: number, delay?: number, webhookHandler?: (eventName: string, payload: any) => void): Promise<T>`
 
 ### Method Shortcuts
 
-- `hook.get(url, options)`
-- `hook.post(url, data, options)`
-- `hook.put(url, data, options)`
-- `hook.del(url, options) (alias for DELETE)`
-- `hook.patch(url, data, options)`
-- `hook.head(url, options)`
-- `hook.options(url, options)`
-
-### Configuration Functions
-
-| Function                                 | Description                                                                 |
-| ---------------------------------------- | ----------------------------------------------------------------------------|
-| configureGlobal(config)                  | Set global defaults for headers, retries, delays, etc.                      |
-| configureLogger(logger)                  | Add hooks for logging requests, responses, and errors.                      |
-| configureRetryCondition(condition)       | Define a custom retry condition (e.g., based on HTTP status or error type). |
+- `hook.get<T>(url, options)`
+- `hook.post<T>(url, data, options)`
+- `hook.put<T>(url, data, options)`
+- `hook.del<T>(url, options)` (alias for DELETE)
+- `hook.patch<T>(url, data, options)`
+- `hook.head<T>(url, options)`
+- `hook.options<T>(url, options)`
 
 ### Parameters
 
-| Parameter | Type                 | Default    | Description                                         |
-| --------- | -------------------- | ---------- | --------------------------------------------------- |
-| `url`     | `string`             | `Required` | The URL to send the HTTP request to.                |
-| `options` | `AxiosRequestConfig` | `{}`       | Axios options (headers, query params, etc.).        |
-| `data`    | `any`                | `{}`       | The data to send with POST, PUT, or PATCH requests. |
-| `retries` | `number`             | `3`        | The number of retry attempts for failed requests.   |
-| `delay`   | `number`             | `1000`     | Delay in milliseconds between retries.              |
+| Parameter | Type          | Description                                         |
+| --------- | ------------- | --------------------------------------------------- |
+| `url`     | `string`      | The URL to send the HTTP request to.                |
+| `options` | `RequestInit` | Options for `fetch` (e.g., headers, body, mode).    |
+| `data`    | `any`         | The data to send with POST, PUT, or PATCH requests. |
 
 ## Testing
 
-Hook includes a robust test suite. Run the tests with:
+Hook includes a robust test suite to ensure reliability. Run the tests with:
 
 ```bash
 npm test
 ```
 
-Sample test structure:
+Example Test
 
 ```tsx
-import hook from './src/hook';
+import hook, { configureGlobal } from './hook';
 
 describe('Hook Tests', () => {
-  it('should perform a GET request', async () => {
-    const data = await hook.get('https://jsonplaceholder.typicode.com/posts/1');
-    expect(data).toHaveProperty('id', 1);
-  });
-
-  it('should retry on failure and eventually succeed', async () => {
-    const data = await hook.get('https://jsonplaceholder.typicode.com/failing-url', {}, 3, 1000);
+  it('should perform a GET request successfully', async () => {
+    const data = await hook.get('https://api.example.com/resource');
     expect(data).toBeDefined();
   });
 });
