@@ -2,31 +2,34 @@
  * Logger Types and Configuration
  */
 export type HookLogger = {
-  onRequest?: (url: string, options: RequestInit) => void;
-  onResponse?: (url: string, response: Response) => void;
-  onError?: (url: string, error: Error) => void;
+  onRequest?: (url: string, options: RequestInit) => void | Promise<void>;
+  onResponse?: (url: string, response: Response) => void | Promise<void>;
+  onError?: (url: string, error: Error) => void | Promise<void>;
 };
 
-let logger: HookLogger = {};
+let globalLogger: Readonly<HookLogger> = {};
 
 export const configureLogger = (customLogger: HookLogger) => {
-  logger = customLogger;
+  globalLogger = Object.freeze(customLogger); // Prevent mutations
 };
 
 /**
  * Global Configuration Types and Setup
  */
-export interface HookGlobalConfig {
-  headers?: Record<string, string>;
-  mode?: RequestMode;
-  credentials?: RequestCredentials;
-}
+export type HookGlobalConfig = Readonly<RequestInit>;
 
 let globalConfig: HookGlobalConfig = {};
 
 export const configureGlobal = (config: HookGlobalConfig) => {
-  globalConfig = { ...globalConfig, ...config };
+  globalConfig = Object.freeze({ ...globalConfig, ...config }); // Prevent mutations
 };
+
+/**
+ * Hook Options (Extend RequestInit to Include Local Logger)
+ */
+export interface HookOptions extends RequestInit {
+  logger?: HookLogger; // Optional local logger
+}
 
 /**
  * Utility to parse response based on Content-Type
@@ -44,7 +47,7 @@ const parseResponse = async <T = any,>(response: Response): Promise<T> => {
     return (await response.blob()) as T;
   }
 
-  return undefined as T; // Return undefined for unsupported content types
+  throw new Error(`[Hook] Unsupported response content type: ${contentType}`);
 };
 
 /**
@@ -52,23 +55,24 @@ const parseResponse = async <T = any,>(response: Response): Promise<T> => {
  */
 async function coreHook<T = any>(
   url: string,
-  options: RequestInit = {}
+  options: HookOptions = {}
 ): Promise<T> {
+  const localLogger = options.logger || globalLogger; // Use local logger if provided
   const mergedOptions: RequestInit = {
-    ...globalConfig,
-    ...options,
+    ...globalConfig, // Apply global configuration
+    ...options, // Apply local options
     headers: {
-      ...globalConfig.headers, // Global headers
-      ...options.headers, // Local headers
+      ...globalConfig.headers, // Merge global headers
+      ...options.headers, // Merge local headers
     },
   };
 
   try {
-    logger.onRequest?.(url, mergedOptions);
+    await localLogger.onRequest?.(url, mergedOptions);
 
     const response = await fetch(url, mergedOptions);
 
-    logger.onResponse?.(url, response);
+    await localLogger.onResponse?.(url, response);
 
     if (!response.ok) {
       throw new Error(
@@ -78,7 +82,7 @@ async function coreHook<T = any>(
 
     return await parseResponse<T>(response);
   } catch (error: any) {
-    logger.onError?.(url, error);
+    await localLogger.onError?.(url, error);
     throw error;
   }
 }
@@ -87,13 +91,13 @@ async function coreHook<T = any>(
  * HTTP Method Shortcuts
  */
 const hook = {
-  get: async <T = any,>(url: string, options: RequestInit = {}): Promise<T> =>
+  get: async <T = any,>(url: string, options: HookOptions = {}): Promise<T> =>
     coreHook<T>(url, { ...options, method: "GET" }),
 
   post: async <T = any,>(
     url: string,
-    data: any = {},
-    options: RequestInit = {}
+    data: Record<string, any>,
+    options: HookOptions = {}
   ): Promise<T> =>
     coreHook<T>(url, {
       ...options,
@@ -107,8 +111,8 @@ const hook = {
 
   put: async <T = any,>(
     url: string,
-    data: any = {},
-    options: RequestInit = {}
+    data: Record<string, any>,
+    options: HookOptions = {}
   ): Promise<T> =>
     coreHook<T>(url, {
       ...options,
@@ -120,13 +124,13 @@ const hook = {
       },
     }),
 
-  del: async <T = any,>(url: string, options: RequestInit = {}): Promise<T> =>
+  del: async <T = any,>(url: string, options: HookOptions = {}): Promise<T> =>
     coreHook<T>(url, { ...options, method: "DELETE" }),
 
   patch: async <T = any,>(
     url: string,
-    data: any = {},
-    options: RequestInit = {}
+    data: Record<string, any>,
+    options: HookOptions = {}
   ): Promise<T> =>
     coreHook<T>(url, {
       ...options,
@@ -138,12 +142,12 @@ const hook = {
       },
     }),
 
-  head: async <T = any,>(url: string, options: RequestInit = {}): Promise<T> =>
+  head: async <T = any,>(url: string, options: HookOptions = {}): Promise<T> =>
     coreHook<T>(url, { ...options, method: "HEAD" }),
 
   options: async <T = any,>(
     url: string,
-    options: RequestInit = {}
+    options: HookOptions = {}
   ): Promise<T> => coreHook<T>(url, { ...options, method: "OPTIONS" }),
 };
 
