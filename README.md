@@ -1,10 +1,10 @@
 # Hook
 
->A lightweight HTTP client built on the Fetch API, designed for flexibility, configurability, and detailed lifecycle logging.
+>A lightweight HTTP client built on the Fetch API, designed for flexibility, configurability, lifecycle logging, and analytics.
 
 ## About
 
-**Hook** is a flexible HTTP library built directly on the Fetch API. It supports global and local configurations, lifecycle logging, and all HTTP methods, making it an ideal choice for applications that demand granular control over network requests. With TypeScript compatibility, hook ensures type safety and an enhanced developer experience.
+**Hook** is a flexible HTTP library built directly on the Fetch API. It supports global and local configurations, lifecycle logging, analytics, and all HTTP methods, making it an ideal choice for applications that demand granular control over network requests. With TypeScript compatibility, Hook ensures type safety and an enhanced developer experience.
 
 ## Features
 
@@ -12,7 +12,7 @@
 - 🛡️ **Global Configuration**: Define default headers, mode, and credentials.
 - 🔄 **Content-Type Detection**: Automatically parses JSON, text, binary, and more.
 - 📈 **Lifecycle Logging**: Hook into request, response, and error events.
-- 🛠️ **Lightweight**: Minimal overhead, dependency-free, and built on `fetch`.
+- 📊 **Built-in Analytics**: Monitor total requests, response times, success rates, and errors.
 
 ## Installation
 
@@ -113,31 +113,47 @@ await hook.post(
 );
 ```
 
-### 6. Advanced Example: Combining Configurations and Logging
+### 6. Analytics
+
+Hook comes with built-in analytics to monitor your HTTP activity.
+
+#### Retrieve Analytics
 
 ```tsx
-import { configureGlobal, configureLogger } from '@ktranish/hook';
+import { getAnalytics } from '@ktranish/hook';
 
-configureGlobal({
-  headers: { Authorization: 'Bearer global-token' },
-  credentials: 'include',
-});
+const analytics = getAnalytics();
+console.log('Analytics:', analytics);
+```
 
-configureLogger({
-  onRequest: (url, options) => console.log(`[Global Request] ${url}`, options),
-  onResponse: (url, response) => console.log(`[Global Response] ${url}`, response),
-  onError: (url, error) => console.error(`[Global Error] ${url}`, error),
-});
+#### Reset Analytics
 
-const localLogger = {
-  onRequest: (url, options) => console.log(`[Local Request] ${url}`, options),
-  onResponse: (url, response) => console.log(`[Local Response] ${url}`, response),
-};
+```tsx
+import { resetAnalytics } from '@ktranish/hook';
 
-await hook.get('https://api.example.com/resource', {
-  headers: { 'Custom-Header': 'CustomValue' },
-  logger: localLogger,
-});
+resetAnalytics();
+console.log('Analytics reset.');
+```
+
+#### Sample Analytics Data
+
+```json
+{
+  "totalRequests": 10,
+  "requestMethods": {
+    "GET": 5,
+    "POST": 3,
+    "DELETE": 2
+  },
+  "averageResponseTime": 120.5,
+  "successfulRequests": 8,
+  "failedRequests": 2,
+  "errorCodes": {
+    "404": 1,
+    "500": 1
+  },
+  "responseTimes": [100, 120, 130, 140, 110]
+}
 ```
 
 ### 7. Custom Fetch Options
