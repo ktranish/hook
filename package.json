@@ -1,0 +1,36 @@
+{
+  "name": "@ktranish/hook",
+  "version": "1.0.0",
+  "description": "A lightweight, enterprise-ready HTTP request library with retry logic, circuit breaker, and logging.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [
+    "http",
+    "requests",
+    "retry",
+    "circuit-breaker",
+    "enterprise",
+    "typescript",
+    "axios"
+  ],
+  "author": "Kenny Tran",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ktranish/hook.git"
+  },
+  "homepage": "https://github.com/ktranish/hook#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  }
+}
