@@ -1,7 +1,7 @@
 {
   "name": "@ktranish/hook",
   "version": "1.0.0",
-  "description": "A lightweight, enterprise-ready HTTP request library with retry logic, circuit breaker, and logging.",
+  "description": "A lightweight HTTP client built on the Fetch API, designed for flexibility, configurability, lifecycle logging, and analytics.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
