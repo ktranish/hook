@@ -1,34 +1,36 @@
 {
   "compilerOptions": {
     /* Language and Environment */
-    "target": "ESNext",
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "lib": ["DOM", "ESNext"],
-
-    /* Modules */
-    "moduleResolution": "node",
-    "baseUrl": "./src",
-
-    /* Emit */
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": false, // Emit both .js and .d.ts files
-    "outDir": "dist",
-
-    /* Interop Constraints */
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
+    "target": "es2016" /* Target modern JavaScript (ES2016) for compatibility. */,
+    "module": "commonjs" /* Use CommonJS module system for Node.js. */,
+    "esModuleInterop": true /* Enable support for CommonJS module imports. */,
+    "forceConsistentCasingInFileNames": true /* Ensure consistent casing in imports. */,
 
     /* Type Checking */
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
+    "strict": true /* Enable all strict type-checking options. */,
+    "noImplicitAny": true /* Disallow implicit 'any' type declarations. */,
+    "strictNullChecks": true /* Ensure 'null' and 'undefined' are handled explicitly. */,
+    "noUnusedLocals": true /* Report unused local variables. */,
+    "noUnusedParameters": true /* Report unused function parameters. */,
+    "noImplicitReturns": true /* Ensure all code paths in a function return a value. */,
+    "noFallthroughCasesInSwitch": true /* Prevent unintentional fallthrough in switch statements. */,
+
+    /* Modules */
+    "moduleResolution": "node" /* Use Node.js module resolution algorithm. */,
+
+    /* Emit */
+    "declaration": true /* Generate declaration files for TypeScript modules. */,
+    "sourceMap": true /* Generate source map files for debugging. */,
+    "outDir": "./dist" /* Output directory for compiled JavaScript files. */,
+    "removeComments": true /* Remove comments from emitted files. */,
+
+    /* Interop Constraints */
+    "allowSyntheticDefaultImports": true /* Allow 'import x from y' when a module doesn't have a default export. */,
 
     /* Completeness */
-    "resolveJsonModule": true
+    "skipLibCheck": true /* Skip type checking of declaration files for faster builds. */
   },
-  "include": ["src"],
+  "include": ["src"] /* Include source files in the 'src' directory. */,
   "exclude": [
     "node_modules",
     "dist",
@@ -37,5 +39,5 @@
     "**/*.spec.ts",
     "**/*.spec.tsx",
     "tests/**"
-  ]
+  ] /* Exclude node_modules and output directory from compilation. */
 }
