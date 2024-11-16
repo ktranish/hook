@@ -19,10 +19,13 @@
 Install Hook via your preferred package manager:
 
 ```bash
-# Using npm
+# npm
 npm install @ktranish/hook
 
-# Using pnpm
+# yarn
+yarn add @ktranish/hook
+
+# pnpm
 pnpm add @ktranish/hook
 ```
 
