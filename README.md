@@ -1,6 +1,10 @@
 # Hook
 
-**Hook** is a lightweight, flexible, and enterprise-ready TypeScript library for managing HTTP requests. Built on the native `fetch` API, it offers a clean API for all HTTP methods, robust global configurations, content-type handling, and lifecycle logging for requests and responses.
+>A lightweight HTTP client built on the Fetch API, designed for flexibility, configurability, and detailed lifecycle logging.
+
+## About
+
+**Hook** is a flexible HTTP library built directly on the Fetch API. It supports global and local configurations, lifecycle logging, and all HTTP methods, making it an ideal choice for applications that demand granular control over network requests. With TypeScript compatibility, hook ensures type safety and an enhanced developer experience.
 
 ## Features
 
