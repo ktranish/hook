@@ -32,6 +32,71 @@ export interface HookOptions extends RequestInit {
 }
 
 /**
+ * Analytics Types and Storage
+ */
+type AnalyticsData = {
+  totalRequests: number;
+  requestMethods: Record<string, number>;
+  averageResponseTime: number;
+  successfulRequests: number;
+  failedRequests: number;
+  errorCodes: Record<string, number>;
+  responseTimes: number[];
+};
+
+const analytics: AnalyticsData = {
+  totalRequests: 0,
+  requestMethods: {},
+  averageResponseTime: 0,
+  successfulRequests: 0,
+  failedRequests: 0,
+  errorCodes: {},
+  responseTimes: [],
+};
+
+/**
+ * Update analytics after each request
+ */
+const updateAnalytics = (
+  method: string,
+  status: number,
+  responseTime: number
+) => {
+  analytics.totalRequests += 1;
+  analytics.requestMethods[method] =
+    (analytics.requestMethods[method] || 0) + 1;
+  analytics.responseTimes.push(responseTime);
+
+  if (status >= 200 && status < 300) {
+    analytics.successfulRequests += 1;
+  } else {
+    analytics.failedRequests += 1;
+    analytics.errorCodes[status] = (analytics.errorCodes[status] || 0) + 1;
+  }
+
+  const totalResponseTime = analytics.responseTimes.reduce(
+    (sum, time) => sum + time,
+    0
+  );
+  analytics.averageResponseTime =
+    totalResponseTime / analytics.responseTimes.length;
+};
+
+/**
+ * Expose analytics API
+ */
+export const getAnalytics = () => ({ ...analytics });
+export const resetAnalytics = () => {
+  analytics.totalRequests = 0;
+  analytics.requestMethods = {};
+  analytics.averageResponseTime = 0;
+  analytics.successfulRequests = 0;
+  analytics.failedRequests = 0;
+  analytics.errorCodes = {};
+  analytics.responseTimes = [];
+};
+
+/**
  * Utility to parse response based on Content-Type
  */
 const parseResponse = async <T = any,>(response: Response): Promise<T> => {
@@ -58,6 +123,8 @@ async function coreHook<T = any>(
   options: HookOptions = {}
 ): Promise<T> {
   const localLogger = options.logger || globalLogger; // Use local logger if provided
+  const method = options.method || "GET";
+
   const mergedOptions: RequestInit = {
     ...globalConfig, // Apply global configuration
     ...options, // Apply local options
@@ -67,23 +134,34 @@ async function coreHook<T = any>(
     },
   };
 
+  const startTime = performance.now();
+
   try {
     await localLogger.onRequest?.(url, mergedOptions);
 
     const response = await fetch(url, mergedOptions);
 
-    await localLogger.onResponse?.(url, response);
+    const endTime = performance.now();
+    const responseTime = endTime - startTime;
 
     if (!response.ok) {
+      // Single point for failed analytics update
+      updateAnalytics(method, response.status, responseTime);
       throw new Error(
         `[Hook] Request failed with status ${response.status}: ${response.statusText}`
       );
     }
 
+    // Analytics for successful responses
+    updateAnalytics(method, response.status, responseTime);
+
+    await localLogger.onResponse?.(url, response);
     return await parseResponse<T>(response);
   } catch (error: any) {
+    // Log the error but do not update analytics
     await localLogger.onError?.(url, error);
-    throw error;
+
+    throw error; // Re-throw for external handling
   }
 }
 

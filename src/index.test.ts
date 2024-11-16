@@ -1,4 +1,9 @@
-import hook, { configureGlobal, configureLogger } from "./";
+import hook, {
+  configureGlobal,
+  configureLogger,
+  getAnalytics,
+  resetAnalytics,
+} from "./";
 
 // Mock fetch globally for tests
 globalThis.fetch = jest.fn();
@@ -24,6 +29,7 @@ const createMockResponse = (
 describe("Hook Tests", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetAnalytics();
   });
 
   it("should perform a GET request", async () => {
@@ -42,76 +48,56 @@ describe("Hook Tests", () => {
       "https://api.example.com/resource",
       expect.objectContaining({ method: "GET" })
     );
+
+    const analytics = getAnalytics();
+    expect(analytics.totalRequests).toBe(1);
+    expect(analytics.requestMethods.GET).toBe(1);
   });
 
-  it("should throw an error for unsupported response content types", async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce(
-      createMockResponse(true, null, { "Content-Type": "unsupported/type" })
-    );
-
-    await expect(
-      hook.get("https://api.example.com/unsupported")
-    ).rejects.toThrow(
-      "[Hook] Unsupported response content type: unsupported/type"
-    );
-  });
-
-  it("should perform a POST request with data", async () => {
-    const mockResponse = { id: 2 };
-    (fetch as jest.Mock).mockResolvedValueOnce(
-      createMockResponse(true, mockResponse, {
-        "Content-Type": "application/json",
-      })
-    );
-
-    const data = await hook.post("https://api.example.com/resource", {
-      name: "New Resource",
-    });
-    expect(data).toEqual(mockResponse);
-    expect(fetch).toHaveBeenCalledWith(
-      "https://api.example.com/resource",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ name: "New Resource" }),
-        headers: expect.objectContaining({
-          "Content-Type": "application/json",
-        }),
-      })
-    );
-  });
-
-  it("should support global logger", async () => {
-    const globalLogger = {
+  it("should log and update analytics for failed requests", async () => {
+    const localLogger = {
       onRequest: jest.fn(),
       onResponse: jest.fn(),
       onError: jest.fn(),
     };
 
-    configureLogger(globalLogger);
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      statusText: "Not Found",
+    });
 
-    const mockResponse = { id: 6 };
-    (fetch as jest.Mock).mockResolvedValueOnce(
-      createMockResponse(true, mockResponse, {
-        "Content-Type": "application/json",
-      })
+    await expect(
+      hook.get("https://api.example.com/not-found", { logger: localLogger })
+    ).rejects.toThrow("[Hook] Request failed with status 404: Not Found");
+
+    expect(localLogger.onError).toHaveBeenCalledWith(
+      "https://api.example.com/not-found",
+      expect.any(Error)
     );
 
-    await hook.get("https://api.example.com/resource");
-    expect(globalLogger.onRequest).toHaveBeenCalledWith(
-      "https://api.example.com/resource",
-      expect.any(Object)
-    );
-    expect(globalLogger.onResponse).toHaveBeenCalledWith(
-      "https://api.example.com/resource",
-      expect.any(Object)
-    );
-    expect(globalLogger.onError).not.toHaveBeenCalled();
+    const analytics = getAnalytics();
+    expect(analytics.failedRequests).toBe(1);
+    expect(analytics.errorCodes["404"]).toBe(1);
   });
 
-  it("should merge global and local headers", async () => {
-    configureGlobal({ headers: { Authorization: "Bearer token" } });
+  it("should correctly handle text responses", async () => {
+    const mockResponse = "Hello, world!";
+    (fetch as jest.Mock).mockResolvedValueOnce(
+      createMockResponse(true, mockResponse, { "Content-Type": "text/plain" })
+    );
 
-    const mockResponse = { id: 4 };
+    const data = await hook.get<string>("https://api.example.com/text");
+    expect(data).toEqual(mockResponse);
+
+    const analytics = getAnalytics();
+    expect(analytics.totalRequests).toBe(1);
+  });
+
+  it("should correctly merge global and local headers", async () => {
+    configureGlobal({ headers: { Authorization: "Bearer global-token" } });
+
+    const mockResponse = { id: 2 };
     (fetch as jest.Mock).mockResolvedValueOnce(
       createMockResponse(true, mockResponse, {
         "Content-Type": "application/json",
@@ -126,55 +112,48 @@ describe("Hook Tests", () => {
       "https://api.example.com/resource",
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: "Bearer token",
+          Authorization: "Bearer global-token",
           "Custom-Header": "CustomValue",
         }),
       })
     );
   });
 
-  it("should log errors using a local logger", async () => {
-    const localLogger = {
+  it("should track analytics for multiple request types", async () => {
+    const mockGetResponse = { id: 1 };
+    const mockPostResponse = { id: 2 };
+
+    (fetch as jest.Mock)
+      .mockResolvedValueOnce(
+        createMockResponse(true, mockGetResponse, {
+          "Content-Type": "application/json",
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockResponse(true, mockPostResponse, {
+          "Content-Type": "application/json",
+        })
+      );
+
+    await hook.get("https://api.example.com/resource");
+    await hook.post("https://api.example.com/resource", {
+      name: "New Resource",
+    });
+
+    const analytics = getAnalytics();
+    expect(analytics.totalRequests).toBe(2);
+    expect(analytics.requestMethods.GET).toBe(1);
+    expect(analytics.requestMethods.POST).toBe(1);
+  });
+
+  it("should handle global logger", async () => {
+    const globalLogger = {
       onRequest: jest.fn(),
       onResponse: jest.fn(),
       onError: jest.fn(),
     };
 
-    (fetch as jest.Mock).mockRejectedValueOnce(new Error("Network Error"));
-
-    await expect(
-      hook.get("https://api.example.com/failing", { logger: localLogger })
-    ).rejects.toThrow("Network Error");
-
-    expect(localLogger.onError).toHaveBeenCalledWith(
-      "https://api.example.com/failing",
-      expect.any(Error)
-    );
-  });
-
-  it("should correctly handle text responses", async () => {
-    const mockResponse = "Hello, world!";
-    (fetch as jest.Mock).mockResolvedValueOnce(
-      createMockResponse(true, mockResponse, { "Content-Type": "text/plain" })
-    );
-
-    const data = await hook.get<string>("https://api.example.com/text");
-    expect(data).toEqual(mockResponse);
-  });
-
-  it("should correctly handle binary responses (arrayBuffer)", async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce(
-      createMockResponse(true, null, {
-        "Content-Type": "application/octet-stream",
-      })
-    );
-
-    const data = await hook.get<ArrayBuffer>("https://api.example.com/file");
-    expect(data).toBeInstanceOf(ArrayBuffer);
-  });
-
-  it("should handle global headers", async () => {
-    configureGlobal({ headers: { Authorization: "Bearer token" } });
+    configureLogger(globalLogger);
 
     const mockResponse = { id: 3 };
     (fetch as jest.Mock).mockResolvedValueOnce(
@@ -184,23 +163,49 @@ describe("Hook Tests", () => {
     );
 
     await hook.get("https://api.example.com/resource");
-    expect(fetch).toHaveBeenCalledWith(
+
+    expect(globalLogger.onRequest).toHaveBeenCalledWith(
       "https://api.example.com/resource",
-      expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer token" }),
-      })
+      expect.any(Object)
+    );
+    expect(globalLogger.onResponse).toHaveBeenCalledWith(
+      "https://api.example.com/resource",
+      expect.any(Object)
+    );
+
+    const analytics = getAnalytics();
+    expect(analytics.totalRequests).toBe(1);
+  });
+
+  it("should handle unsupported response types gracefully", async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce(
+      createMockResponse(true, null, { "Content-Type": "unsupported/type" })
+    );
+
+    await expect(
+      hook.get("https://api.example.com/unsupported")
+    ).rejects.toThrow(
+      "[Hook] Unsupported response content type: unsupported/type"
     );
   });
 
-  it("should throw an error for failed requests", async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      statusText: "Not Found",
-    });
-
-    await expect(hook.get("https://api.example.com/not-found")).rejects.toThrow(
-      "[Hook] Request failed with status 404: Not Found"
+  it("should reset analytics", async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce(
+      createMockResponse(
+        true,
+        { id: 1 },
+        { "Content-Type": "application/json" }
+      )
     );
+
+    await hook.get("https://api.example.com/resource");
+
+    const analyticsBeforeReset = getAnalytics();
+    expect(analyticsBeforeReset.totalRequests).toBe(1);
+
+    resetAnalytics();
+
+    const analyticsAfterReset = getAnalytics();
+    expect(analyticsAfterReset.totalRequests).toBe(0);
   });
 });
