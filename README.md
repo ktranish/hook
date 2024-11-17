@@ -14,7 +14,9 @@
 - 📈 **Lifecycle Logging**: Hook into request, response, and error events.
 - 📊 **Built-in Analytics**: Monitor total requests, response times, success rates, and errors.
 
-## Installation
+## Getting Started
+
+### Installation
 
 Install Hook via your preferred package manager:
 
@@ -29,9 +31,9 @@ yarn add @ktranish/hook
 pnpm add @ktranish/hook
 ```
 
-## Usage
+### Usage
 
-### 1. Basic GET Request
+#### 1. Basic GET Request
 
 ```tsx
 import hook from '@ktranish/hook';
@@ -42,7 +44,7 @@ const fetchData = async () => {
 };
 ```
 
-### 2. POST Request with Data
+#### 2. POST Request with Data
 
 ```tsx
 const createResource = async () => {
@@ -51,7 +53,7 @@ const createResource = async () => {
 };
 ```
 
-### 3. Global Configuration
+#### 3. Global Configuration
 
 Configure global headers, credentials, or other fetch options:
 
@@ -66,7 +68,7 @@ configureGlobal({
 await hook.get('https://api.example.com/resource');
 ```
 
-### 4. Local Overrides
+#### 4. Local Overrides
 
 Override global configurations for specific requests:
 
@@ -77,9 +79,9 @@ await hook.get('https://api.example.com/resource', {
 });
 ```
 
-### 5. Lifecycle Logging
+#### 5. Lifecycle Logging
 
-#### Global Logging
+**Global Logging**
 
 Configure global loggers to track all HTTP requests:
 
@@ -95,7 +97,7 @@ configureLogger({
 await hook.get('https://api.example.com/resource'); // Automatically logged
 ```
 
-#### Local Logging
+**Local Logging**
 
 Override global logging with a local logger:
 
@@ -113,11 +115,11 @@ await hook.post(
 );
 ```
 
-### 6. Analytics
+#### 6. Analytics
 
 Hook comes with built-in analytics to monitor your HTTP activity.
 
-#### Retrieve Analytics
+**Retrieve Analytics**
 
 ```tsx
 import { getAnalytics } from '@ktranish/hook';
@@ -126,7 +128,7 @@ const analytics = getAnalytics();
 console.log('Analytics:', analytics);
 ```
 
-#### Reset Analytics
+**Reset Analytics**
 
 ```tsx
 import { resetAnalytics } from '@ktranish/hook';
@@ -135,7 +137,7 @@ resetAnalytics();
 console.log('Analytics reset.');
 ```
 
-#### Sample Analytics Data
+**Sample Analytics Data**
 
 ```json
 {
@@ -156,7 +158,7 @@ console.log('Analytics reset.');
 }
 ```
 
-### 7. Custom Fetch Options
+#### 7. Custom Fetch Options
 
 Hook supports all valid Fetch API options:
 
