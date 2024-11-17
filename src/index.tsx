@@ -1,3 +1,5 @@
+import { Logs } from "@ktranish/logs"; // Logs package for Elasticsearch logging
+
 /**
  * Logger Types and Configuration
  */
@@ -5,6 +7,7 @@ export type HookLogger = {
   onRequest?: (url: string, options: RequestInit) => void | Promise<void>;
   onResponse?: (url: string, response: Response) => void | Promise<void>;
   onError?: (url: string, error: Error) => void | Promise<void>;
+  logs?: Logs; // Optional Logs instance for Elasticsearch
 };
 
 let globalLogger: Readonly<HookLogger> = {};
@@ -144,22 +147,35 @@ async function coreHook<T = any>(
     const endTime = performance.now();
     const responseTime = endTime - startTime;
 
-    if (!response.ok) {
-      // Single point for failed analytics update
-      updateAnalytics(method, response.status, responseTime);
-      throw new Error(
-        `[Hook] Request failed with status ${response.status}: ${response.statusText}`
-      );
-    }
-
     // Analytics for successful responses
     updateAnalytics(method, response.status, responseTime);
+
+    // Log to Elasticsearch if enabled
+    if (localLogger.logs) {
+      await localLogger.logs.log("info", "HTTP Request", {
+        method,
+        url,
+        status: response.status,
+        responseTime,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     await localLogger.onResponse?.(url, response);
     return await parseResponse<T>(response);
   } catch (error: any) {
     // Log the error but do not update analytics
     await localLogger.onError?.(url, error);
+
+    // Log the error to Elasticsearch if enabled
+    if (localLogger.logs) {
+      await localLogger.logs.log("error", "HTTP Error", {
+        method,
+        url,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     throw error; // Re-throw for external handling
   }
