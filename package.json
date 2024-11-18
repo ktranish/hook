@@ -12,13 +12,11 @@
     "test": "jest"
   },
   "keywords": [
-    "http",
-    "requests",
-    "retry",
-    "circuit-breaker",
-    "enterprise",
+    "fetch",
     "typescript",
-    "axios"
+    "analytics",
+    "logging",
+    "http-client"
   ],
   "author": "Kenny Tran",
   "license": "MIT",
